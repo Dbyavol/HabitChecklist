@@ -10,5 +10,9 @@ data class Habit(
     val name: String,
     val lastDone: Long,
     val streak: Int,
-    val state: Int
+    val state: Int,
+    val reminderEnabled: Boolean = false,
+    val windowStartMinutes: Int = 8 * 60, // default 08:00
+    val windowEndMinutes: Int = 22 * 60, // default 22:00
+    val remindersPerDay: Int = 0
 )

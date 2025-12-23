@@ -9,7 +9,7 @@ interface HabitDao {
     suspend fun getAll(): List<Habit>
 
     @Insert
-    suspend fun insert(habit: Habit)
+    suspend fun insert(habit: Habit): Long
 
     @Update
     suspend fun update(habit: Habit)

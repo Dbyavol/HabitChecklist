@@ -1,0 +1,64 @@
+@startuml
+title HabitChecklist architecture
+skinparam monochrome true
+skinparam shadowing false
+
+package "UI (Jetpack Compose)" {
+  [MainActivity]
+  [NavHost / NavRoutes]
+  [HabitListScreen]
+  [AddHabitScreen]
+  [SettingsScreen]
+  [HabitItem]
+}
+
+package "Domain" {
+  [HabitViewModel]
+}
+
+package "Data" {
+  [AppDatabase <<Room>>]
+  [HabitDao <<DAO>>]
+  [Habit Entity]
+  [ThemePreferences <<DataStore>>]
+}
+
+package "System" {
+  [ReminderScheduler]
+  [ReminderReceiver <<BroadcastReceiver>>]
+  [AlarmManager / NotificationManager]
+}
+
+[MainActivity] --> [NavHost / NavRoutes]
+[NavHost / NavRoutes] --> [HabitListScreen]
+[NavHost / NavRoutes] --> [AddHabitScreen]
+[NavHost / NavRoutes] --> [SettingsScreen]
+[HabitListScreen] --> [HabitItem]
+[HabitListScreen] --> [HabitViewModel] : observe habits\nmarkDone / delete
+[AddHabitScreen] --> [HabitViewModel] : addHabit(name,\nreminder params)
+[SettingsScreen] --> [ThemePreferences] : isDark / setDark
+
+[HabitViewModel] --> [HabitDao] : getAll / insert /\nupdate / delete
+[HabitViewModel] --> [ReminderScheduler] : schedule/cancel
+[HabitDao] --> [AppDatabase]
+[AppDatabase] --> [Habit Entity]
+
+[ReminderScheduler] --> [AlarmManager / NotificationManager]
+[ReminderScheduler] --> [ReminderReceiver] : PendingIntent
+[ReminderReceiver] --> [NotificationManager]
+
+[HabitItem] --> [HabitViewModel] : markDone / delete
+[AppTheme] ..> [ThemePreferences]
+
+note right of [Habit Entity]
+Fields:
+- id, name
+- lastDone, streak, state
+- reminderEnabled
+- windowStartMinutes
+- windowEndMinutes
+- remindersPerDay
+end note
+
+@enduml
+

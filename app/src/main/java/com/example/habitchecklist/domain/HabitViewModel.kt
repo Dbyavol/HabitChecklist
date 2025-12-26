@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habitchecklist.data.*
+import com.example.habitchecklist.utils.AppMetrics
 import com.example.habitchecklist.utils.DateUtils
 import com.example.habitchecklist.utils.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,9 +25,13 @@ class HabitViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadHabits() {
         viewModelScope.launch {
-            val data = dao.getAll()
-            _habits.value = data
-            data.forEach { reminders.schedule(it) }
+            try {
+                val data = dao.getAll()
+                _habits.value = data
+                data.forEach { reminders.schedule(it) }
+            } catch (e: Exception) {
+                AppMetrics.recordError(e, "loadHabits")
+            }
         }
     }
 
@@ -38,51 +43,63 @@ class HabitViewModel(application: Application) : AndroidViewModel(application) {
         remindersPerDay: Int
     ) {
         viewModelScope.launch {
-            val habit = Habit(
-                name = name,
-                lastDone = System.currentTimeMillis(),
-                streak = 0,
-                state = 0,
-                reminderEnabled = reminderEnabled && remindersPerDay > 0,
-                windowStartMinutes = windowStartMinutes,
-                windowEndMinutes = windowEndMinutes,
-                remindersPerDay = remindersPerDay
-            )
+            try {
+                val habit = Habit(
+                    name = name,
+                    lastDone = System.currentTimeMillis(),
+                    streak = 0,
+                    state = 0,
+                    reminderEnabled = reminderEnabled && remindersPerDay > 0,
+                    windowStartMinutes = windowStartMinutes,
+                    windowEndMinutes = windowEndMinutes,
+                    remindersPerDay = remindersPerDay
+                )
 
-            val id = dao.insert(habit).toInt()
-            reminders.schedule(habit.copy(id = id))
-            loadHabits()
+                val id = dao.insert(habit).toInt()
+                reminders.schedule(habit.copy(id = id))
+                loadHabits()
+            } catch (e: Exception) {
+                AppMetrics.recordError(e, "addHabit")
+            }
         }
     }
 
     fun markDone(habit: Habit) {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
+            try {
+                val now = System.currentTimeMillis()
 
-            if (DateUtils.isSameDay(habit.lastDone, now)) {
-                return@launch
-            }
+                if (DateUtils.isSameDay(habit.lastDone, now)) {
+                    return@launch
+                }
 
-            val days = DateUtils.daysBetween(habit.lastDone, now)
+                val days = DateUtils.daysBetween(habit.lastDone, now)
 
-            val newStreak = if (days <= 1) habit.streak + 1 else 1
+                val newStreak = if (days <= 1) habit.streak + 1 else 1
 
-            dao.update(
-                habit.copy(
-                    lastDone = now,
-                    streak = newStreak,
-                    state = 0
+                dao.update(
+                    habit.copy(
+                        lastDone = now,
+                        streak = newStreak,
+                        state = 0
+                    )
                 )
-            )
-            loadHabits()
+                loadHabits()
+            } catch (e: Exception) {
+                AppMetrics.recordError(e, "markDone")
+            }
         }
     }
 
     fun delete(habit: Habit) {
         viewModelScope.launch {
-            dao.delete(habit)
-            reminders.cancel(habit.id)
-            loadHabits()
+            try {
+                dao.delete(habit)
+                reminders.cancel(habit.id)
+                loadHabits()
+            } catch (e: Exception) {
+                AppMetrics.recordError(e, "delete")
+            }
         }
     }
 }

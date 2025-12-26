@@ -1,56 +1,88 @@
 @startuml
-title HabitChecklist architecture
+title HabitChecklist Architecture
 skinparam monochrome true
 skinparam shadowing false
+skinparam packageStyle rectangle
 
-package "UI (Jetpack Compose)" {
-  [MainActivity]
-  [NavHost / NavRoutes]
-  [HabitListScreen]
-  [AddHabitScreen]
-  [SettingsScreen]
-  [HabitItem]
+package "UI Layer (Jetpack Compose)" {
+  [MainActivity] as MainActivity
+  [NavHost / NavRoutes] as NavHost
+  [HabitListScreen] as HabitListScreen
+  [AddHabitScreen] as AddHabitScreen
+  [SettingsScreen] as SettingsScreen
+  [HabitItem] as HabitItem
+  [FeedbackDialog] as FeedbackDialog
+  [AppTheme] as AppTheme
 }
 
-package "Domain" {
-  [HabitViewModel]
+package "Domain Layer" {
+  [HabitViewModel] as HabitViewModel
 }
 
-package "Data" {
-  [AppDatabase <<Room>>]
-  [HabitDao <<DAO>>]
-  [Habit Entity]
-  [ThemePreferences <<DataStore>>]
+package "Data Layer" {
+  [AppDatabase <<Room>>] as AppDatabase
+  [HabitDao <<DAO>>] as HabitDao
+  [Habit Entity] as HabitEntity
+  [ThemePreferences <<DataStore>>] as ThemePreferences
 }
 
-package "System" {
-  [ReminderScheduler]
-  [ReminderReceiver <<BroadcastReceiver>>]
-  [AlarmManager / NotificationManager]
+package "Utils / Services" {
+  [DateUtils] as DateUtils
+  [ReminderScheduler] as ReminderScheduler
+  [ReminderReceiver <<BroadcastReceiver>>] as ReminderReceiver
+  [AppMetrics] as AppMetrics
+  [FeedbackManager] as FeedbackManager
+  [PermissionHelper] as PermissionHelper
 }
 
-[MainActivity] --> [NavHost / NavRoutes]
-[NavHost / NavRoutes] --> [HabitListScreen]
-[NavHost / NavRoutes] --> [AddHabitScreen]
-[NavHost / NavRoutes] --> [SettingsScreen]
-[HabitListScreen] --> [HabitItem]
-[HabitListScreen] --> [HabitViewModel] : observe habits\nmarkDone / delete
-[AddHabitScreen] --> [HabitViewModel] : addHabit(name,\nreminder params)
-[SettingsScreen] --> [ThemePreferences] : isDark / setDark
+package "System Services" {
+  [AlarmManager] as AlarmManager
+  [NotificationManager] as NotificationManager
+  [SharedPreferences] as SharedPrefs
+}
 
-[HabitViewModel] --> [HabitDao] : getAll / insert /\nupdate / delete
-[HabitViewModel] --> [ReminderScheduler] : schedule/cancel
-[HabitDao] --> [AppDatabase]
-[AppDatabase] --> [Habit Entity]
+' Navigation flow
+MainActivity --> NavHost
+NavHost --> HabitListScreen
+NavHost --> AddHabitScreen
+NavHost --> SettingsScreen
+HabitListScreen --> HabitItem
+HabitListScreen --> FeedbackDialog
 
-[ReminderScheduler] --> [AlarmManager / NotificationManager]
-[ReminderScheduler] --> [ReminderReceiver] : PendingIntent
-[ReminderReceiver] --> [NotificationManager]
+' UI to ViewModel
+HabitListScreen --> HabitViewModel : observe habits\nmarkDone / delete
+AddHabitScreen --> HabitViewModel : addHabit(name,\nreminder params)
+HabitItem --> HabitViewModel : markDone / delete
 
-[HabitItem] --> [HabitViewModel] : markDone / delete
-[AppTheme] ..> [ThemePreferences]
+' ViewModel to Data
+HabitViewModel --> HabitDao : getAll / insert /\nupdate / delete
+HabitViewModel --> ReminderScheduler : schedule / cancel
+HabitViewModel --> DateUtils : isSameDay /\ndaysBetween
+HabitViewModel --> AppMetrics : recordError
 
-note right of [Habit Entity]
+' Data layer
+HabitDao --> AppDatabase
+AppDatabase --> HabitEntity
+SettingsScreen --> ThemePreferences : isDark / setDark
+AppTheme --> ThemePreferences : isDark
+
+' Reminder system
+ReminderScheduler --> AlarmManager : setRepeating
+ReminderScheduler --> ReminderReceiver : PendingIntent
+ReminderReceiver --> NotificationManager : show notification
+
+' Metrics and Feedback
+MainActivity --> AppMetrics : initialize\nrecordSession\nrecordAppStartTime
+HabitListScreen --> FeedbackManager : recordAction\nshouldShowFeedbackPrompt
+SettingsScreen --> FeedbackManager : openFeedback\nopenRating
+FeedbackDialog --> FeedbackManager : openFeedback / openRating
+AppMetrics --> SharedPrefs : store metrics
+
+' Permissions
+MainActivity --> PermissionHelper : hasNotificationPermission\nrequestNotificationPermission
+
+' Note about Habit Entity
+note right of HabitEntity
 Fields:
 - id, name
 - lastDone, streak, state
@@ -60,5 +92,22 @@ Fields:
 - remindersPerDay
 end note
 
-@enduml
+' Note about AppMetrics
+note right of AppMetrics
+Tracks:
+- Crash rate
+- App start time
+- Session count
+- Error logs
+end note
 
+' Note about FeedbackManager
+note right of FeedbackManager
+Features:
+- Periodic prompts
+- Action tracking
+- Email feedback
+- Play Store rating
+end note
+
+@enduml

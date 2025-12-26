@@ -28,10 +28,25 @@ fun HabitItem(
     onDone: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    // Определяем темную тему по яркости цвета поверхности
+    // Вычисляем яркость по формуле: 0.299*R + 0.587*G + 0.114*B
+    val surfaceColor = colorScheme.surface
+    val brightness = (surfaceColor.red * 0.299f + surfaceColor.green * 0.587f + surfaceColor.blue * 0.114f)
+    val isDark = brightness < 0.5f
+    
+    // Адаптивные цвета для светлой и темной темы
     val targetColor = when (habit.state) {
-        0 -> Color(0xFFA5D6A7)
-        1 -> Color(0xFFFFF59D)
-        else -> Color(0xFFEF9A9A)
+        0 -> if (isDark) Color(0xFF2E7D32) else Color(0xFFA5D6A7) // Зеленый
+        1 -> if (isDark) Color(0xFFF57F17) else Color(0xFFFFF59D) // Желтый
+        else -> if (isDark) Color(0xFFC62828) else Color(0xFFEF9A9A) // Красный
+    }
+    
+    // Цвет текста для лучшей читаемости
+    val textColor = if (isDark) {
+        Color.White
+    } else {
+        Color.Black
     }
 
     val bgColor by animateColorAsState(targetValue = targetColor, label = "color")
@@ -70,10 +85,19 @@ fun HabitItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(habit.name, fontSize = 18.sp)
-                        Text("Streak: ${habit.streak}")
+                        Text(
+                            text = habit.name, 
+                            fontSize = 18.sp,
+                            color = textColor
+                        )
+                        Text(
+                            text = "Streak: ${habit.streak}",
+                            color = textColor.copy(alpha = 0.8f)
+                        )
                     }
-                    Button(onClick = onDone) { Text("✓") }
+                    Button(onClick = onDone) { 
+                        Text("✓", color = Color.White) 
+                    }
                 }
             }
         }

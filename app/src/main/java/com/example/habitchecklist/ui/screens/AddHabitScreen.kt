@@ -1,6 +1,8 @@
 package com.example.habitchecklist.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +26,17 @@ fun AddHabitScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Новая привычка") })
+            TopAppBar(
+                title = { Text("Новая привычка") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Назад"
+                        )
+                    }
+                }
+            )
         }
     ) { padding ->
 
